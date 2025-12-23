@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindPulse.UI</title>
+    <base href="/" />
+    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link href="MindPulse.UI.styles.css" rel="stylesheet" />
+</head>
+
+<body>
+    <div id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">🗙</span>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Global değişkenler
+        let radarChartInstance = null;
+        let lineChartInstance = null;
+
+        window.renderAdvancedCharts = (radarData, lineLabels, lineDataReflex, lineDataMemory) => {
+
+            // --- 1. RADAR GRAFİĞİ (YETENEK HARİTASI) ---
+            const ctxRadar = document.getElementById('radarChart');
+
+            if (ctxRadar) {
+                // DÜZELTME: Sadece değişkene bakma, Canvas üzerinde kalan hayalet grafiği de kontrol et
+                const existingRadar = Chart.getChart(ctxRadar);
+                if (existingRadar) existingRadar.destroy();
+                if (radarChartInstance) radarChartInstance.destroy();
+
+                radarChartInstance = new Chart(ctxRadar, {
+                    type: 'radar',
+                    data: {
+                        labels: ['⚡ Refleks', '🧠 Hafıza', '💤 Uyku Kalitesi', '😊 Ruh Hali', '🔋 Enerji'],
+                        datasets: [{
+                            label: 'Mevcut Durumun',
+                            data: radarData,
+                            fill: true,
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgb(54, 162, 235)',
+                            pointBackgroundColor: 'rgb(54, 162, 235)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(54, 162, 235)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            r: {
+                                angleLines: { display: true },
+                                suggestedMin: 0,
+                                suggestedMax: 100,
+                                ticks: { stepSize: 20 }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+
+            // --- 2. ÇİZGİ GRAFİĞİ (GELİŞİM TRENDİ) ---
+            const ctxLine = document.getElementById('lineChart');
+
+            if (ctxLine) {
+                // DÜZELTME: Çizgi grafik için de aynısı
+                const existingLine = Chart.getChart(ctxLine);
+                if (existingLine) existingLine.destroy();
+                if (lineChartInstance) lineChartInstance.destroy();
+
+                lineChartInstance = new Chart(ctxLine, {
+                    type: 'line',
+                    data: {
+                        labels: lineLabels,
+                        datasets: [
+                            {
+                                label: 'Refleks Skoru',
+                                data: lineDataReflex,
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                                tension: 0.3
+                            },
+                            {
+                                label: 'Hafıza Skoru',
+                                data: lineDataMemory,
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                                tension: 0.3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            }
+        }
+    </script>
+    <script>
+        window.downloadFile = (fileName, content) => {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+    </script>
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>

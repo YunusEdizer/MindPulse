@@ -1,0 +1,203 @@
+﻿@implements IDisposable
+@using MindPulse.UI.Services
+@inject NavigationManager NavManager
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="">
+            <span style="font-size: 1.5rem;">🧠</span>
+            <span style="letter-spacing: 1px;">MindPulse</span>
+        </a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <nav class="flex-column px-3 py-4 h-100">
+
+        <div class="nav-item px-3 mb-2">
+            <NavLink class="nav-link custom-link" href="" Match="NavLinkMatch.All">
+                <span class="icon-box">🏠</span> Ana Sayfa
+            </NavLink>
+        </div>
+
+        @if (AppState.UserId > 0)
+        {
+            <div class="nav-item px-3 mb-2">
+                <NavLink class="nav-link custom-link" href="reaction-test">
+                    <span class="icon-box">⚡</span> Refleks Testi
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3 mb-2">
+                <NavLink class="nav-link custom-link" href="memory-test">
+                    <span class="icon-box">🔢</span> Hafıza Testi
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3 mb-2">
+                <NavLink class="nav-link custom-link" href="daily-log">
+                    <span class="icon-box">📝</span> Günlük Giriş
+                </NavLink>
+            </div>
+
+            <div class="sidebar-divider my-3 mx-3"></div>
+
+            <div class="nav-item px-3 mb-2">
+                <NavLink class="nav-link custom-link" href="analysis">
+                    <span class="icon-box">📊</span> Analiz Raporu
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3 mb-2">
+                <NavLink class="nav-link custom-link" href="history">
+                    <span class="icon-box">📂</span> Geçmiş Kayıtlar
+                </NavLink>
+            </div>
+        }
+
+        <div class="mt-auto pt-4">
+
+            @if (AppState.UserId == 0)
+            {
+                /* --- MİSAFİR İSE --- */
+                <div class="nav-item px-3 mb-2">
+                    <NavLink class="nav-link custom-link auth-link" href="login">
+                        <span class="icon-box">🔐</span> Giriş Yap
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3 mb-2">
+                    <NavLink class="nav-link custom-link auth-link register-btn" href="register">
+                        <span class="icon-box">✨</span> Kayıt Ol
+                    </NavLink>
+                </div>
+            }
+            else
+            {
+                <div class="nav-item px-3 mb-2">
+                    <NavLink class="nav-link custom-link" href="profile">
+                        <span class="icon-box">👤</span> Profilim
+                    </NavLink>
+                </div>
+                /* --- ÜYE İSE --- */
+                <div class="nav-item px-3 mb-2">
+                    <a class="nav-link custom-link logout-link" style="cursor: pointer;" @onclick="Logout">
+                        <span class="icon-box">🚪</span> Çıkış Yap
+                    </a>
+                </div>
+            }
+
+        </div>
+
+    </nav>
+</div>
+
+<style>
+    /* Arkaplan Gradient */
+    .sidebar {
+        background: linear-gradient(180deg, #1a1c2e 0%, #1e2542 100%);
+        box-shadow: 4px 0 15px rgba(0,0,0,0.2);
+        min-height: 100vh;
+    }
+
+    .navbar-brand {
+        font-family: 'Segoe UI', sans-serif;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* Link Tasarımı */
+    .custom-link {
+        border-radius: 12px;
+        color: #a0aec0 !important;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        padding: 12px 15px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .icon-box {
+        font-size: 1.2rem;
+        transition: transform 0.2s;
+        display: inline-block;
+    }
+
+    /* Hover Efekti */
+    .custom-link:hover {
+        background-color: rgba(255, 255, 255, 0.08);
+        color: #ffffff !important;
+        transform: translateX(5px);
+    }
+
+        .custom-link:hover .icon-box {
+            transform: scale(1.2);
+        }
+
+    /* Aktif Sayfa Efekti (Neon) */
+    .custom-link.active {
+        background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+        color: #002347 !important;
+        font-weight: 800;
+        box-shadow: 0 0 15px rgba(79, 172, 254, 0.5);
+    }
+
+    .sidebar-divider {
+        height: 1px;
+        background: rgba(255,255,255,0.1);
+    }
+
+    .logout-link:hover {
+        background-color: rgba(220, 53, 69, 0.2);
+        color: #ff6b6b !important;
+    }
+
+    .register-btn {
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    /* Responsive Düzeltme */
+    @@media (max-width: 641px) {
+        .sidebar {
+            min-height: auto;
+            background: #1a1c2e;
+        }
+    }
+</style>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    // Sayfa Yüklendiğinde: "Zili dinlemeye başla"
+    protected override void OnInitialized()
+    {
+        AppState.OnChange += StateHasChanged; // StateHasChanged: Sayfayı yenile demektir.
+    }
+
+    // Sayfa Kapandığında: "Dinlemeyi bırak" (Hata olmaması için)
+    public void Dispose()
+    {
+        AppState.OnChange -= StateHasChanged;
+    }
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void Logout()
+    {
+        AppState.UserId = 0;
+        AppState.Username = "";
+
+        // Çıkış yapınca haber ver, menü eski haline dönsün
+        AppState.NotifyStateChanged();
+
+        NavManager.NavigateTo("login");
+    }
+}

@@ -1,0 +1,283 @@
+﻿@page "/"
+@using MindPulse.UI.Services
+@using MindPulse.UI.DTOs
+@inject HttpClient Http
+
+<div class="home-container fade-in">
+
+    @if (AppState.UserId == 0)
+    {
+        /* --- MİSAFİR GÖRÜNÜMÜ (AYNEN KORUNDU) --- */
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <span style="font-size: 5rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">🧠</span>
+                <h1 class="display-3 fw-bold mt-3 text-gradient">MindPulse</h1>
+                <p class="lead text-muted fs-4">Zihinsel Performansını Keşfet ve Geliştir.</p>
+            </div>
+
+            <div class="card shadow-lg border-0 mx-auto welcome-card" style="max-width: 500px; border-radius: 20px;">
+                <div class="card-body p-5">
+                    <h4 class="fw-bold mb-3 text-dark">Hemen Başla</h4>
+                    <p class="text-muted mb-4">Verilerini takip etmek, yapay zeka analizlerini görmek ve oyun skorlarını kaydetmek için giriş yap.</p>
+
+                    <div class="d-grid gap-3">
+                        <a href="login" class="btn btn-primary btn-lg rounded-pill shadow-sm fw-bold">🔐 Giriş Yap</a>
+                        <a href="register" class="btn btn-outline-primary btn-lg rounded-pill fw-bold">✨ Kayıt Ol</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-5 pt-4 g-4 justify-content-center">
+                <div class="col-md-4 col-lg-3">
+                    <div class="feature-box">
+                        <span class="fs-1">🎮</span>
+                        <h5 class="fw-bold mt-2">Zihin Oyunları</h5>
+                        <p class="small text-muted">Refleks ve hafıza testleri ile kendini sına.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-3">
+                    <div class="feature-box">
+                        <span class="fs-1">📊</span>
+                        <h5 class="fw-bold mt-2">Detaylı Analiz</h5>
+                        <p class="small text-muted">Grafikler ve istatistiklerle gelişimini izle.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-3">
+                    <div class="feature-box">
+                        <span class="fs-1">🤖</span>
+                        <h5 class="fw-bold mt-2">AI Koçluğu</h5>
+                        <p class="small text-muted">Yapay zekadan kişisel tavsiyeler al.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        /* --- KULLANICI DASHBOARD GÖRÜNÜMÜ --- */
+        <div class="py-4">
+
+            <div class="row align-items-center mb-4">
+                <div class="col-md-8">
+                    <h1 class="fw-bold text-dark mb-0">Hoş Geldin, <span class="text-primary">@AppState.Username</span>! 👋</h1>
+                    <p class="text-muted mt-1">İşte zihinsel performans özetin.</p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <a href="daily-log" class="btn btn-success rounded-pill px-4 shadow-sm">
+                        📝 Günlük Veri Gir
+                    </a>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 16px; border-left: 5px solid #667eea !important;">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-light p-3 rounded-circle text-primary fs-2">🎮</div>
+                            <div class="ms-3">
+                                <p class="text-muted mb-0 small text-uppercase fw-bold">Toplam Oyun</p>
+                                <h2 class="fw-bold mb-0">@totalGames</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 16px; border-left: 5px solid #f6ad55 !important;">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-light p-3 rounded-circle text-warning fs-2" style="color: #f6ad55 !important;">⭐</div>
+                            <div class="ms-3">
+                                <p class="text-muted mb-0 small text-uppercase fw-bold">Ortalama Skor</p>
+                                <h2 class="fw-bold mb-0">@averageScore</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 16px; border-left: 5px solid #48bb78 !important;">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-light p-3 rounded-circle text-success fs-2">🏆</div>
+                            <div class="ms-3">
+                                <p class="text-muted mb-0 small text-uppercase fw-bold">En İyi Skor</p>
+                                <h2 class="fw-bold mb-0">@bestScore</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-5 bg-primary text-white position-relative overflow-hidden"
+                 style="border-radius: 20px; background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);">
+                <div style="position: absolute; top: -20px; right: -20px; font-size: 10rem; opacity: 0.1;">💡</div>
+
+                <div class="card-body p-4 position-relative">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-2">💡 Bunları Biliyor Muydunuz?</h5>
+                            <p class="mb-0 text-dark fs-5" style="font-family: 'Georgia', serif; font-style: italic;">
+                                "@currentFact"
+                            </p>
+                        </div>
+                        <button class="btn btn-sm btn-light rounded-circle shadow-sm ms-3" @onclick="LoadRandomFact" title="Yeni Bilgi">
+                            🔄
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <h4 class="fw-bold text-dark mb-3">Hızlı İşlemler</h4>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm hover-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <div class="card-body p-4 d-flex flex-column justify-content-between">
+                            <div>
+                                <span class="fs-1 bg-white bg-opacity-25 p-2 rounded-3">⚡</span>
+                                <h4 class="mt-4 fw-bold">Egzersiz Yap</h4>
+                                <p class="opacity-75">Reflekslerini ve hafızanı taze tut.</p>
+                            </div>
+                            <div class="mt-3">
+                                <a href="reaction-test" class="btn btn-light text-primary fw-bold rounded-pill w-100 mb-2">Refleks Testi</a>
+                                <a href="memory-test" class="btn btn-outline-light fw-bold rounded-pill w-100">Hafıza Testi</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm hover-card">
+                        <div class="card-body p-4">
+                            <span class="fs-1 text-primary bg-primary bg-opacity-10 p-2 rounded-3">📊</span>
+                            <h4 class="mt-4 fw-bold text-dark">Raporu İncele</h4>
+                            <p class="text-muted">Son performans verilerini ve AI yorumlarını gör.</p>
+                            <a href="analysis" class="btn btn-outline-primary rounded-pill w-100 mt-auto stretched-link">Analize Git</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm hover-card">
+                        <div class="card-body p-4">
+                            <span class="fs-1 text-warning bg-warning bg-opacity-10 p-2 rounded-3">📂</span>
+                            <h4 class="mt-4 fw-bold text-dark">Geçmiş Kayıtlar</h4>
+                            <p class="text-muted">Eski test sonuçlarını ve günlüklerini listele.</p>
+                            <a href="history" class="btn btn-outline-warning rounded-pill w-100 mt-auto stretched-link">Geçmişe Bak</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    /* STİLLER AYNEN KORUNDU */
+    .fade-in {
+        animation: fadeIn 0.8s ease-in-out;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .text-gradient {
+        background: linear-gradient(90deg, #2575fc 0%, #6a11cb 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .hover-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 16px;
+    }
+
+        .hover-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        }
+
+    .welcome-card {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+    }
+
+    .feature-box {
+        padding: 20px;
+        border-radius: 15px;
+        background: white;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        transition: transform 0.2s;
+    }
+
+        .feature-box:hover {
+            transform: scale(1.05);
+        }
+</style>
+
+@code {
+    // İstatistik Değişkenleri
+    private int totalGames = 0;
+    private int averageScore = 0;
+    private int bestScore = 0;
+
+    // YENİ: Bilgi Kartı Değişkenleri
+    private string currentFact = "";
+    private List<string> brainFacts = new List<string>
+    {
+        "Beyniniz, vücudunuzun tükettiği oksijenin %20'sini tek başına kullanır.",
+        "İnsan beyni yaklaşık 100 milyar nöron içerir.",
+        "Uyanıkken beyniniz, küçük bir ampulü yakacak kadar elektrik üretir (yaklaşık 23 watt).",
+        "Hafızayı güçlendirmenin en iyi yollarından biri düzenli uyku ve egzersizdir.",
+        "Beynimiz acı hissetmez; beyin ameliyatları sırasında hasta uyanık kalabilir.",
+        "Yeni bir şeyler öğrenmek, beyin yapısını fiziksel olarak değiştirir (Nöroplastisite).",
+        "Çoklu görev (Multitasking) aslında beynin verimliliğini düşürebilir, odaklanmak daha iyidir."
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Kullanıcı giriş yapmışsa verileri çekip hesaplayalım
+        if (AppState.UserId > 0)
+        {
+            LoadRandomFact(); // Sayfa açılınca rastgele bilgi seç
+            await LoadDashboardStats();
+        }
+    }
+
+    // YENİ: Rastgele Bilgi Seçme Fonksiyonu
+    private void LoadRandomFact()
+    {
+        var rnd = new Random();
+        currentFact = brainFacts[rnd.Next(brainFacts.Count)];
+    }
+
+    private async Task LoadDashboardStats()
+    {
+        try
+        {
+            var results = await Http.GetFromJsonAsync<List<TestResultDto>>($"api/testresults/user/{AppState.UserId}");
+
+            if (results != null && results.Any())
+            {
+                totalGames = results.Count;
+                averageScore = (int)results.Average(x => x.Score);
+                bestScore = results.Max(x => x.Score);
+            }
+        }
+        catch (Exception)
+        {
+            // Hata olursa değerler 0 kalır
+        }
+    }
+
+    public class TestResultDto
+    {
+        public int Score { get; set; }
+    }
+}

@@ -1,0 +1,73 @@
+﻿@page "/login"
+@using MindPulse.UI.DTOs
+@using MindPulse.UI.Services
+@inject HttpClient Http
+@inject NavigationManager NavManager
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">Giriş Yap</h3>
+                </div>
+                <div class="card-body">
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label">Kullanıcı Adı</label>
+                        <input @bind="loginModel.Username" class="form-control" placeholder="Adınız" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Şifre</label>
+                        <input @bind="loginModel.Password" type="password" class="form-control" placeholder="Şifreniz" />
+                    </div>
+
+                    <button class="btn btn-success w-100" @onclick="HandleLogin">Giriş Yap</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private UserRegisterDto loginModel = new UserRegisterDto(); // Login için de aynı DTO'yu kullanabiliriz
+    private string errorMessage = "";
+
+    // Backend'den gelecek cevap modeli
+    private class LoginResponse
+    {
+        public int userId { get; set; }
+        public string username { get; set; }
+    }
+
+    private async Task HandleLogin()
+    {
+        // 1. API'ye soruyoruz: Bu kullanıcı var mı?
+        var response = await Http.PostAsJsonAsync("api/users/login", loginModel);
+
+        if (response.IsSuccessStatusCode)
+        {
+            // 2. Varsa bilgileri alıyoruz
+            var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+
+            // 3. Uygulama hafızasına (AppState) kaydediyoruz
+            AppState.UserId = result.userId;
+            AppState.Username = result.username;
+
+            AppState.NotifyStateChanged();
+
+            // 4. Ana sayfaya yönlendir
+            NavManager.NavigateTo("/");
+        }
+        else
+        {
+            errorMessage = "Kullanıcı adı veya şifre hatalı!";
+        }
+    }
+}

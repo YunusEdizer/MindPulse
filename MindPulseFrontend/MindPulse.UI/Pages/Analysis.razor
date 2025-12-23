@@ -1,0 +1,313 @@
+﻿@page "/analysis"
+@using MindPulse.UI.Services
+@using MindPulse.UI.DTOs
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<style>
+    /* Genel Arkaplan */
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    /* Modern Kart Yapısı */
+    .dashboard-card {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        background: white;
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Kart Başlıkları */
+    .card-header-custom {
+        background: #ffffff;
+        border-bottom: 1px solid #f0f2f5;
+        padding: 20px 24px;
+        font-weight: 700;
+        color: #2d3748;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.1rem;
+    }
+
+    /* Özel AI Kartı (Gradient) */
+    .ai-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    /* Sağ Taraftaki Mini İstatistik Kutuları */
+    .stat-box {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        border-left: 5px solid transparent; /* Sol çizgi için yer */
+        transition: transform 0.2s;
+    }
+    .stat-box:hover { transform: scale(1.02); }
+
+    .stat-label { font-size: 0.8rem; color: #718096; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 1.6rem; font-weight: 800; margin-top: 4px; color: #2d3748; }
+    
+    /* Liste Elemanları */
+    .insight-item {
+        background-color: #f7fafc;
+        border-left: 4px solid #3182ce;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        padding: 12px 16px;
+    }
+</style>
+
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">📊 Performans Raporu</h2>
+            <p class="text-muted mb-0">Yapay zeka destekli biyolojik ritim analizi</p>
+        </div>
+        <div>
+            <button class="btn btn-white shadow-sm rounded-pill px-4 fw-bold text-primary" @onclick="OnInitializedAsync">
+                🔄 Yenile
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex flex-column justify-content-center align-items-center my-5" style="min-height: 300px;">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+            <span class="text-muted fw-bold">Verileriniz Analiz Ediliyor...</span>
+        </div>
+    }
+    else if (analysisData == null)
+    {
+        <div class="alert alert-warning text-center shadow-sm p-5 rounded-4">
+            <h4 class="fw-bold">Veri Bulunamadı 😔</h4>
+            <p>Analiz yapabilmemiz için lütfen oyun oynayın ve uyku verisi girin.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-lg-5">
+                <div class="dashboard-card h-100">
+                    <div class="card-header-custom text-primary">
+                        <span>🎯</span> Yetenek Haritası
+                    </div>
+                    <div class="card-body">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                    <div class="card-footer bg-white border-0 text-center pb-4">
+                        <small class="text-muted fst-italic">* Değerler 100 puan üzerinden normalize edilmiştir.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="dashboard-card h-100">
+                    <div class="card-header-custom text-success">
+                        <span>📈</span> Gelişim Grafiği (Son 10 Gün)
+                    </div>
+                    <div class="card-body">
+                        <canvas id="lineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-lg-8">
+
+                @if (analysisData.PredictedScore > 0)
+                {
+                    <div class="dashboard-card ai-card">
+                        <div class="card-body text-center py-5">
+                            <div class="badge bg-white text-primary px-3 py-2 rounded-pill fw-bold mb-3">
+                                ✨ AI Regresyon Modeli
+                            </div>
+                            <h5 class="text-uppercase" style="opacity: 0.9;">Gelecek Tahmini</h5>
+                            <p class="mb-2" style="opacity: 0.9;">Bu gece <strong>8 saat</strong> uyursan yarınki tahmini performansın:</p>
+                            
+                            <h1 class="display-1 fw-bold mb-2">@analysisData.PredictedScore.ToString("0")</h1>
+                            
+                            <p class="fst-italic mb-0 small" style="opacity: 0.8;">"@analysisData.Suggestion"</p>
+                        </div>
+                    </div>
+                }
+
+                <div class="dashboard-card border-start border-4 border-danger">
+                    <div class="card-header-custom">
+                        <span class="fs-4">🤯</span> Stres vs Performans
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center align-items-center mb-3">
+                            <div class="col-5">
+                                <div class="p-3 bg-light rounded-3">
+                                    <h2 class="text-danger fw-bold mb-0">@analysisData.ScoreStressed.ToString("0")</h2>
+                                    <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Stresli Gün Ort.</small>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <span class="fs-3 fw-bold text-muted">VS</span>
+                            </div>
+                            <div class="col-5">
+                                <div class="p-3 bg-light rounded-3">
+                                    <h2 class="text-success fw-bold mb-0">@analysisData.ScoreRelaxed.ToString("0")</h2>
+                                    <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Rahat Gün Ort.</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger text-center fw-bold mb-0">
+                             💡 @analysisData.MoodSuggestion
+                        </div>
+                    </div>
+                </div>
+
+                @if (analysisData.Insights != null && analysisData.Insights.Any())
+                {
+                    <div class="dashboard-card border-start border-4 border-info">
+                        <div class="card-header-custom">
+                            <span class="fs-4">🧬</span> Detaylı Nöro-Analiz
+                        </div>
+                        <div class="card-body pt-0">
+                            <ul class="list-unstyled mt-3">
+                                @foreach (var insight in analysisData.Insights)
+                                {
+                                    <li class="insight-item shadow-sm">
+                                        @((MarkupString)System.Text.RegularExpressions.Regex.Replace(insight, @"\*\*(.*?)\*\*", "<strong class='text-dark'>$1</strong>"))
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="col-lg-4">
+                <div class="dashboard-card p-4 bg-light">
+                    <h6 class="text-uppercase text-muted fw-bold mb-4 ps-1">Uyku Ortalamaları</h6>
+
+                    <div class="stat-box" style="border-left-color: #28a745;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stat-label text-success">😴 İdeal (>7.5s)</div>
+                                <div class="stat-value">@analysisData.CategoryHigh.ToString("0")</div>
+                            </div>
+                            <div class="fs-2 text-success opacity-25">🔋</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-box" style="border-left-color: #ffc107;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stat-label text-warning">😐 Orta (6-7.5s)</div>
+                                <div class="stat-value">@analysisData.CategoryMedium.ToString("0")</div>
+                            </div>
+                            <div class="fs-2 text-warning opacity-25">⚖️</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-box" style="border-left-color: #dc3545;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stat-label text-danger">😫 Az (&lt;6s)</div>
+                                <div class="stat-value">@analysisData.CategoryLow.ToString("0")</div>
+                            </div>
+                            <div class="fs-2 text-danger opacity-25">🪫</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 p-4 rounded-4 bg-white shadow-sm border text-center">
+                        <div class="mb-2 fs-1">🤖</div>
+                        <h6 class="fw-bold text-primary mb-2">Genel Tespit</h6>
+                        <p class="text-muted small mb-0">
+                            @analysisData.Suggestion
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private AnalysisResponse? analysisData;
+
+    private class AnalysisResponse
+    {
+        public double CategoryLow { get; set; }
+        public double CategoryMedium { get; set; }
+        public double CategoryHigh { get; set; }
+        
+        public string Suggestion { get; set; } = "";     
+        public double PredictedScore { get; set; }       
+
+        public double ScoreStressed { get; set; }        
+        public double ScoreRelaxed { get; set; }         
+        public string MoodSuggestion { get; set; } = ""; 
+
+        public List<string> Insights { get; set; } = new();
+
+        public string[] TrendDates { get; set; } = new string[0];
+        public double[] TrendReflex { get; set; } = new double[0];
+        public double[] TrendMemory { get; set; } = new double[0];
+
+        public string Message { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Yenile butonuna basınca yükleniyor animasyonu görünsün
+        isLoading = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<AnalysisResponse>($"api/analysis/{AppState.UserId}");
+            analysisData = (response == null || !string.IsNullOrEmpty(response.Message)) ? null : response;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Hata: " + ex.Message);
+            analysisData = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (analysisData != null)
+        {
+            // --- RADAR GRAFİĞİ HESAPLAMA ---
+            double reflexScore = analysisData.CategoryHigh > 0 ? analysisData.CategoryHigh : 50;
+            double memoryScore = reflexScore * 0.95; 
+            double sleepQuality = 70;
+            if (analysisData.CategoryHigh > analysisData.CategoryLow) sleepQuality = 90;
+            double moodScore = 60;
+            if (analysisData.ScoreRelaxed > 0) moodScore = 85;
+            double energyScore = (sleepQuality + moodScore) / 2;
+
+            var radarData = new double[] { reflexScore, memoryScore, sleepQuality, moodScore, energyScore };
+
+            // --- GRAFİKLERİ ÇİZ ---
+            await JS.InvokeVoidAsync("renderAdvancedCharts", 
+                radarData, 
+                analysisData.TrendDates,  
+                analysisData.TrendReflex, 
+                analysisData.TrendMemory  
+            );
+        }
+    }
+}

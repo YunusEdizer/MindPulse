@@ -1,0 +1,204 @@
+﻿@page "/reaction-test"
+@using MindPulse.UI.DTOs
+@using MindPulse.UI.Services
+@inject HttpClient Http
+@inject NavigationManager NavManager
+
+<div class="container text-center mt-5">
+
+    @if (gameState == "start")
+    {
+        <h2>⚡ Hassas Refleks Testi v2.0</h2>
+        <p class="fs-5">Test <strong>5 tur</strong> sürecektir. En iyi ortalamayı yakalamaya çalış!</p>
+        <button class="btn btn-primary btn-lg mt-4 px-5" @onclick="StartGame">Teste Başla</button>
+    }
+    else if (gameState == "waiting")
+    {
+        <div class="alert alert-danger p-5 shadow">
+            <h3>Bekle... 🔴</h3>
+            <p>Tur: @currentRound / 5</p>
+        </div>
+    }
+    else if (gameState == "click_now")
+    {
+        <div class="alert alert-success p-5 shadow" @onclick="HandleClick" style="cursor: pointer; height: 350px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+            <h1 style="font-size: 4rem;">TIKLA! 🟢</h1>
+        </div>
+    }
+    else if (gameState == "round_result")
+    {
+        <div class="mt-4">
+            <h3>⏱️ @lastReactionTime ms</h3>
+            <p>Sıradaki tura hazırlan...</p>
+        </div>
+    }
+    else if (gameState == "final_result")
+    {
+        <div class="card shadow p-4 mt-3">
+            <h2 class="text-primary">🏆 Test Tamamlandı!</h2>
+            <hr />
+
+            <h1 class="display-4 fw-bold">Ortalama: @averageTime.ToString("0") ms</h1>
+            <h4 class="text-muted mt-2">Puanın: <span class="text-success fw-bold">@finalScore</span></h4>
+
+            <div class="alert alert-info d-inline-block mt-3 py-2 px-3">
+                <small>ℹ️ Bilgi: Ortalama bir insanın tepki süresi <strong>270-300 ms</strong> arasındadır.</small>
+            </div>
+
+            @if (isSaving)
+            {
+                <div class="d-flex justify-content-center align-items-center mt-3">
+                    <div class="spinner-border text-primary me-2" role="status"></div>
+                    <span>Analiz merkezine gönderiliyor...</span>
+                </div>
+            }
+            else
+            {
+                <div class="mt-4">
+                    <button class="btn btn-warning mx-2 px-4" @onclick="ResetGame">Tekrar Dene</button>
+                    <button class="btn btn-secondary mx-2 px-4" @onclick='() => NavManager.NavigateTo("/")'>Ana Sayfa</button>
+                </div>
+            }
+        </div>
+    }
+    else if (gameState == "too_soon")
+    {
+        <div class="alert alert-warning p-4">
+            <h3>⚠️ Çok erken bastın!</h3>
+            <p>Ceza olarak bu tur yeniden başlayacak.</p>
+            <button class="btn btn-primary mt-2" @onclick="RetryRound">Devam Et</button>
+        </div>
+    }
+
+</div>
+
+@code {
+    // Oyun Durumları: start, waiting, click_now, round_result, final_result, too_soon
+    private string gameState = "start";
+
+    private int currentRound = 1;
+    private const int totalRounds = 5;
+
+    private DateTime startTime;
+    private double lastReactionTime;
+    private List<double> reactionTimes = new List<double>();
+
+    private double averageTime;
+    private int finalScore;
+    private bool isSaving = false;
+
+    private async Task StartGame()
+    {
+        ResetVariables();
+        await StartRound();
+    }
+
+    private void ResetVariables()
+    {
+        currentRound = 1;
+        reactionTimes.Clear();
+        gameState = "start";
+    }
+
+    private async Task ResetGame()
+    {
+        ResetVariables();
+        await StartRound();
+    }
+
+    private async Task StartRound()
+    {
+        gameState = "waiting";
+        StateHasChanged();
+
+        // Rastgele bekleme süresi (2 sn - 5 sn arası) - Şaşırtmaca olsun
+        var randomDelay = new Random().Next(2000, 5000);
+        await Task.Delay(randomDelay);
+
+        if (gameState == "waiting")
+        {
+            gameState = "click_now";
+            startTime = DateTime.Now;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleClick()
+    {
+        if (gameState == "waiting")
+        {
+            gameState = "too_soon";
+        }
+        else if (gameState == "click_now")
+        {
+            var endTime = DateTime.Now;
+            lastReactionTime = (endTime - startTime).TotalMilliseconds;
+            reactionTimes.Add(lastReactionTime);
+
+            if (currentRound < totalRounds)
+            {
+                // Ara ekran göster ve sonraki tura geç
+                gameState = "round_result";
+                StateHasChanged();
+                await Task.Delay(1000); // 1 saniye sonucu görsün
+                currentRound++;
+                await StartRound();
+            }
+            else
+            {
+                // Oyun bitti, final hesaplama
+                await FinishGame();
+            }
+        }
+    }
+
+    private async Task RetryRound()
+    {
+        await StartRound();
+    }
+
+    private async Task FinishGame()
+    {
+        // Ortalamayı al
+        averageTime = reactionTimes.Average();
+        finalScore = CalculateScore(averageTime);
+        gameState = "final_result";
+
+        // Kaydet
+        await SaveResult();
+    }
+
+    private async Task SaveResult()
+    {
+        isSaving = true;
+        StateHasChanged();
+
+        var resultDto = new CreateTestResultDto
+        {
+            UserId = AppState.UserId,
+            TestType = "Refleks (5 Tur)",
+            ReactionTimeMs = averageTime, // Artık ortalamayı kaydediyoruz
+            Score = finalScore
+        };
+
+        await Http.PostAsJsonAsync("api/testresults", resultDto);
+        isSaving = false;
+    }
+
+    private int CalculateScore(double ms)
+    {
+        // GÜNCELLEME: Eşik değer 200ms -> 300ms oldu.
+        // Artık 300ms altı "Mükemmel" kabul edilecek.
+
+        if (ms < 300) return 100; // 300'den hızlıysan Tam Puan!
+        if (ms > 1000) return 0;  // 1 saniyeden yavaşsan 0 puan.
+
+        // Formül: 300ms'yi geçen her 10ms için 1.5 puan kıralım.
+        // Örnek: 400ms yapan biri -> (100 fark) -> 15 puan ceza -> 85 alır. (Gayet makul)
+
+        int penalty = (int)((ms - 300) / 7); // Böleni 7 yaptık ki puan dengeli düşsün
+        int score = 100 - penalty;
+
+        return Math.Clamp(score, 0, 100); // Skoru 0-100 arasına sabitle
+    }
+}

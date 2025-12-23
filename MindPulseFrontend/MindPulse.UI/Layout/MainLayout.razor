@@ -1,0 +1,70 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main class="d-flex flex-column min-vh-100">
+        <article class="content px-4 py-4 flex-grow-1 fade-in-page">
+            @Body
+        </article>
+
+        <footer class="bg-white border-top py-4 mt-auto">
+            <div class="container-fluid px-4">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-center text-center text-md-start">
+
+                    <div class="mb-2 mb-md-0">
+                        <span class="fw-bold text-primary">🧠 MindPulse</span>
+                        <span class="text-muted small ms-2">© 2025 Tüm Hakları Saklıdır.</span>
+                    </div>
+
+                    <div class="text-muted small">
+                        <span>Zihinsel Performans Takip Sistemi</span>
+                        <span class="mx-2">|</span>
+                        <span>v1.0.0 Release</span>
+                    </div>
+
+                </div>
+            </div>
+        </footer>
+
+    </main>
+</div>
+
+<style>
+    .page {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+
+    main {
+        flex: 1;
+        background-color: #f8f9fa;
+    }
+
+    /* DÜZELTME BURADA: @@media kullanıyoruz */
+    @@media (min-width: 641px) {
+        .page {
+            flex-direction: row;
+        }
+
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+        }
+
+        main {
+            padding-left: 0;
+        }
+    }
+
+    .content {
+        max-width: 1400px;
+        margin: 0 auto;
+        width: 100%;
+    }
+</style>

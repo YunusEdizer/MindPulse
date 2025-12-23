@@ -1,0 +1,65 @@
+﻿@page "/profile"
+@using MindPulse.UI.Services
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+
+            <div class="card border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+
+                <div class="bg-primary p-5 text-center text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="mb-3">
+                        <span style="font-size: 4rem; background: rgba(255,255,255,0.2); border-radius: 50%; padding: 15px;">👤</span>
+                    </div>
+                    <h2 class="fw-bold">@AppState.Username</h2>
+                    <p class="mb-0 opacity-75">MindPulse Üyesi</p>
+                </div>
+
+                <div class="card-body p-4">
+                    <h5 class="fw-bold text-muted mb-4 ps-2 border-start border-4 border-primary">Hesap Özeti</h5>
+
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between py-3">
+                            <span class="text-muted">🔑 Kullanıcı ID</span>
+                            <span class="fw-bold text-dark">#@AppState.UserId</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between py-3">
+                            <span class="text-muted">📅 Durum</span>
+                            <span class="badge bg-success rounded-pill">Aktif Üye</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between py-3">
+                            <span class="text-muted">🛡️ Yetki</span>
+                            <span class="fw-bold text-dark">Standart Kullanıcı</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-grid">
+                        <button class="btn btn-outline-danger rounded-pill py-2" @onclick="GoToLogout">
+                            🚪 Oturumu Kapat
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@inject NavigationManager NavManager
+@code {
+    protected override void OnInitialized()
+    {
+        // Eğer giriş yapmamışsa anasayfaya at
+        if (AppState.UserId == 0) NavManager.NavigateTo("/");
+    }
+
+    private void GoToLogout()
+    {
+        // Logout işlemi için NavMenu'daki fonksiyonu tetikleyemeyiz ama
+        // manuel olarak AppState'i sıfırlayıp yönlendirebiliriz.
+        AppState.UserId = 0;
+        AppState.Username = "";
+        AppState.NotifyStateChanged();
+        NavManager.NavigateTo("login");
+    }
+}

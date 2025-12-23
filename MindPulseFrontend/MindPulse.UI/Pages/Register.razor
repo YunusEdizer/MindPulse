@@ -1,0 +1,59 @@
+﻿@page "/register"
+@using MindPulse.UI.DTOs
+@inject HttpClient Http
+@inject NavigationManager NavManager
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Kayıt Ol</h3>
+                </div>
+                <div class="card-body">
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label">Kullanıcı Adı</label>
+                        <input @bind="registerModel.Username" class="form-control" placeholder="Adınızı girin" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Şifre</label>
+                        <input @bind="registerModel.Password" type="password" class="form-control" placeholder="Şifrenizi girin" />
+                    </div>
+
+                    <button class="btn btn-success w-100" @onclick="HandleRegister">Kayıt Ol</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Formdan gelen verileri tutacak nesne
+    private UserRegisterDto registerModel = new UserRegisterDto();
+    private string errorMessage = "";
+
+    private async Task HandleRegister()
+    {
+        // 1. API'ye istek atıyoruz
+        var response = await Http.PostAsJsonAsync("api/users/register", registerModel);
+
+        if (response.IsSuccessStatusCode)
+        {
+            // 2. Başarılıysa Ana Sayfaya yönlendir (veya Giriş sayfasına)
+            NavManager.NavigateTo("/");
+            Console.WriteLine("Kayıt Başarılı!");
+        }
+        else
+        {
+            // 3. Hata varsa ekrana yaz
+            errorMessage = "Kayıt başarısız. Kullanıcı adı alınmış olabilir.";
+        }
+    }
+}

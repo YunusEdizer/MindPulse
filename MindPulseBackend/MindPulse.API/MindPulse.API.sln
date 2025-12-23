@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36327.8
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MindPulse.API", "MindPulse.API\MindPulse.API.csproj", "{8A00A15F-F6CA-4306-B874-6722A4D6C341}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MindPulse.UI", "..\..\MindPulseFrontend\MindPulse.UI\MindPulse.UI.csproj", "{6A36C877-C8A2-421D-AC71-CB55D6DDA393}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8A00A15F-F6CA-4306-B874-6722A4D6C341}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A00A15F-F6CA-4306-B874-6722A4D6C341}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A00A15F-F6CA-4306-B874-6722A4D6C341}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A00A15F-F6CA-4306-B874-6722A4D6C341}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A36C877-C8A2-421D-AC71-CB55D6DDA393}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A36C877-C8A2-421D-AC71-CB55D6DDA393}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A36C877-C8A2-421D-AC71-CB55D6DDA393}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A36C877-C8A2-421D-AC71-CB55D6DDA393}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {13E71E54-28C9-4620-96B3-849CF270F0B1}
+	EndGlobalSection
+EndGlobal

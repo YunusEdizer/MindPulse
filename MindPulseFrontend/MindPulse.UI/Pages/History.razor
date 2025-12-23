@@ -1,0 +1,208 @@
+﻿@page "/history"
+@using MindPulse.UI.Services
+@using MindPulse.UI.DTOs
+@using System.Text
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">📂 Geçmiş Kayıtlar</h2>
+            <p class="text-muted mb-0">Tüm test sonuçlarının detaylı listesi</p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-success shadow-sm rounded-pill px-3 text-white fw-bold"
+                    @onclick="ExportToCsv"
+                    disabled="@(testResults == null || !testResults.Any())">
+                📥 Excel'e Aktar
+            </button>
+
+            <button class="btn btn-white shadow-sm rounded-pill px-4 text-primary fw-bold bg-white" @onclick="LoadHistory">
+                🔄 Listeyi Yenile
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex flex-column justify-content-center align-items-center my-5">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <span class="text-muted">Kayıtlar yükleniyor...</span>
+        </div>
+    }
+    else if (testResults == null || !testResults.Any())
+    {
+        <div class="alert alert-light text-center shadow-sm p-5 rounded-4 border">
+            <span class="fs-1 d-block mb-3">📭</span>
+            <h4 class="fw-bold text-muted">Henüz Kayıt Yok</h4>
+            <p class="text-muted">Oyun oynadıkça skorlarınız burada listelenecek.</p>
+            <a href="reaction-test" class="btn btn-primary rounded-pill px-4 mt-2">🎮 Oyun Oyna</a>
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="py-3 ps-4 text-muted text-uppercase small fw-bold">Tarih</th>
+                            <th class="py-3 text-muted text-uppercase small fw-bold">Test Türü</th>
+                            <th class="py-3 text-muted text-uppercase small fw-bold">Skor</th>
+                            <th class="py-3 text-muted text-uppercase small fw-bold">Detay (Tepki Süresi)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in testResults.OrderByDescending(x => x.CreatedAt))
+                        {
+                            <tr style="cursor: default;">
+                                <td class="ps-4 fw-bold text-secondary">
+                                    @item.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                                </td>
+
+                                <td>
+                                    @if (item.TestType.Contains("Refleks"))
+                                    {
+                                        <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill">
+                                            ⚡ Refleks
+                                        </span>
+                                    }
+                                    else if (item.TestType.Contains("Hafıza"))
+                                    {
+                                        <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+                                            🔢 Hafıza
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary px-3 py-2 rounded-pill">
+                                            @item.TestType
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    @if (item.Score >= 85)
+                                    {
+                                        <span class="d-inline-flex align-items-center gap-1 text-success fw-bold">
+                                            <span class="dot bg-success"></span> @item.Score (Mükemmel)
+                                        </span>
+                                    }
+                                    else if (item.Score >= 50)
+                                    {
+                                        <span class="d-inline-flex align-items-center gap-1 text-warning fw-bold" style="color: #f59e0b !important;">
+                                            <span class="dot bg-warning"></span> @item.Score (İyi)
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="d-inline-flex align-items-center gap-1 text-danger fw-bold">
+                                            <span class="dot bg-danger"></span> @item.Score (Geliştirilmeli)
+                                        </span>
+                                    }
+                                </td>
+
+                                <td class="text-muted">
+                                    @if (item.ReactionTimeMs > 0)
+                                    {
+                                        <span>⏱️ @item.ReactionTimeMs ms</span>
+                                    }
+                                    else
+                                    {
+                                        <span>-</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    /* Tablo Satır Hover Efekti */
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+        transform: scale(1.002);
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        z-index: 10;
+        position: relative;
+    }
+
+    /* Renkli Nokta (Dot) */
+    .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+</style>
+
+@code {
+    private List<TestResultDto>? testResults;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHistory();
+    }
+
+    private async Task LoadHistory()
+    {
+        isLoading = true;
+        try
+        {
+            if (AppState.UserId > 0)
+            {
+                testResults = await Http.GetFromJsonAsync<List<TestResultDto>>($"api/testresults/user/{AppState.UserId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Hata: " + ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // --- YENİ EKLENEN: EXCEL (CSV) ÇIKTISI ALMA ---
+    private async Task ExportToCsv()
+    {
+        if (testResults == null || !testResults.Any()) return;
+
+        var sb = new StringBuilder();
+        // CSV Başlık Satırı
+        sb.AppendLine("Tarih,Test Turu,Skor,Tepki Suresi (ms)");
+
+        // Verileri Satır Satır Ekle
+        foreach (var item in testResults.OrderByDescending(x => x.CreatedAt))
+        {
+            // CSV formatına uygun string oluşturma
+            // Tarih, Tip, Skor, ms
+            var line = $"{item.CreatedAt:dd.MM.yyyy HH:mm},{item.TestType},{item.Score},{item.ReactionTimeMs}";
+            sb.AppendLine(line);
+        }
+
+        // Dosya ismi oluştur ve JavaScript fonksiyonunu çağır
+        var fileName = $"MindPulse_Gecmis_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+        await JS.InvokeVoidAsync("downloadFile", fileName, sb.ToString());
+    }
+
+    // DTO Sınıfı
+    public class TestResultDto
+    {
+        public int Id { get; set; }
+        public int UserId { get; set; }
+        public string TestType { get; set; }
+        public int Score { get; set; }
+        public int ReactionTimeMs { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+}

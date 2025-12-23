@@ -1,0 +1,6 @@
+@MindPulse.API_HostAddress = http://localhost:5074
+
+GET {{MindPulse.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

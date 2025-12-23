@@ -1,0 +1,204 @@
+﻿@page "/memory-test"
+@using MindPulse.UI.DTOs
+@using MindPulse.UI.Services
+@inject HttpClient Http
+@inject NavigationManager NavManager
+
+<div class="container text-center mt-4">
+    <h2 class="mb-3">🧠 Görsel Hafıza Testi (4x4)</h2>
+
+    @if (gameState == "start")
+    {
+        <p class="fs-5">Ekranda yanan beyaz kareleri aklında tut ve onlar söndükten sonra yerlerine tıkla!</p>
+        <div class="alert alert-info d-inline-block">
+            Hedef: <strong>14. Seviye</strong> (Tüm ekranı hatırlamak!)
+        </div>
+        <br />
+        <button class="btn btn-primary btn-lg mt-3" @onclick="StartGame">Oyuna Başla</button>
+    }
+    else if (gameState == "watch")
+    {
+        <h3>Seviye @level / 14 - <span class="text-warning">İzle! 👀</span></h3>
+    }
+    else if (gameState == "play")
+    {
+        <h3>Seviye @level / 14 - <span class="text-success">Sıra Sende! 👇</span></h3>
+    }
+    else if (gameState == "gamewon")
+    {
+        <div class="card shadow-lg p-5 mx-auto border-success" style="max-width: 600px;">
+            <h1 class="display-3">🏆</h1>
+            <h2 class="text-success fw-bold">MÜKEMMEL HAFIZA!</h2>
+            <h4 class="mt-3 text-muted">%100 Başarı Sağlandı</h4>
+            <hr />
+            <h1 class="display-4 fw-bold text-primary">Puan: @score</h1>
+
+            <div class="alert alert-success mt-3">
+                Tebrikler! 4x4'lük ızgaradaki tüm kareleri hatasız hatırladın.
+                Bu, fotoğrafik hafıza seviyesidir.
+            </div>
+
+            <div class="mt-4">
+                <button class="btn btn-warning mx-2" @onclick="StartGame">Tekrar Oyna</button>
+                <button class="btn btn-secondary mx-2" @onclick='() => NavManager.NavigateTo("/")'>Ana Sayfa</button>
+            </div>
+        </div>
+    }
+    else if (gameState == "gameover")
+    {
+        <div class="card shadow p-4 mx-auto" style="max-width: 500px;">
+            <h2 class="text-danger">Oyun Bitti!</h2>
+            <h4 class="mt-3">Ulaşılan Seviye: @level</h4>
+            <h1 class="display-4 fw-bold text-primary">Puan: @score</h1>
+
+            <div class="mt-4">
+                <button class="btn btn-warning mx-2" @onclick="StartGame">Tekrar Dene</button>
+                <button class="btn btn-secondary mx-2" @onclick='() => NavManager.NavigateTo("/")'>Ana Sayfa</button>
+            </div>
+        </div>
+    }
+
+    @if (gameState == "watch" || gameState == "play")
+    {
+        <div class="mt-4 d-flex justify-content-center">
+            <div style="display: grid; grid-template-columns: repeat(4, 80px); gap: 10px;">
+                @for (int i = 0; i < 16; i++)
+                {
+                    int localIndex = i;
+                    <div @onclick="() => HandleTileClick(localIndex)"
+                         class="@GetTileClass(localIndex)"
+                         style="width: 80px; height: 80px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string gameState = "start"; // start, watch, play, gameover, gamewon
+    private int level = 1;
+    private int score = 0;
+
+    private List<int> pattern = new List<int>();
+    private List<int> userClicks = new List<int>();
+    private List<int> activeTiles = new List<int>();
+
+    private async Task StartGame()
+    {
+        level = 1;
+        score = 0;
+        await StartLevel();
+    }
+
+    private async Task StartLevel()
+    {
+        gameState = "watch";
+        pattern.Clear();
+        userClicks.Clear();
+        activeTiles.Clear();
+        StateHasChanged();
+
+        await Task.Delay(1000);
+
+        var random = new Random();
+
+        // 14. Seviye = 16 Kare (Full Ekran)
+        int tileCount = 2 + level;
+        if (tileCount > 16) tileCount = 16;
+
+        while (pattern.Count < tileCount)
+        {
+            int r = random.Next(0, 16);
+            if (!pattern.Contains(r)) pattern.Add(r);
+        }
+
+        activeTiles.AddRange(pattern);
+        StateHasChanged();
+
+        // Seviye arttıkça görme süresini biraz artır ki imkansız olmasın
+        // Seviye 14 için 2.5 saniye verelim
+        int delayTime = 1500 + (level * 50);
+        await Task.Delay(delayTime);
+
+        activeTiles.Clear();
+        gameState = "play";
+        StateHasChanged();
+    }
+
+    private async Task HandleTileClick(int index)
+    {
+        if (gameState != "play") return;
+
+        activeTiles.Add(index);
+        StateHasChanged();
+        await Task.Delay(200);
+        activeTiles.Remove(index);
+        StateHasChanged();
+
+        if (pattern.Contains(index))
+        {
+            if (!userClicks.Contains(index))
+            {
+                userClicks.Add(index);
+                score += 10;
+
+                // Tüm kareleri bildi mi?
+                if (userClicks.Count == pattern.Count)
+                {
+                    // --- KRİTİK KONTROL ---
+                    if (level == 14)
+                    {
+                        // OYUNU BİTİR VE KAZAN
+                        await GameWon();
+                    }
+                    else
+                    {
+                        // SONRAKİ SEVİYEYE GEÇ
+                        level++;
+                        await StartLevel();
+                    }
+                }
+            }
+        }
+        else
+        {
+            await GameOver();
+        }
+    }
+
+    private string GetTileClass(int index)
+    {
+        string css = "border shadow-sm ";
+        if (activeTiles.Contains(index))
+        {
+            return css + "bg-white border-white shadow-lg";
+        }
+        return css + "bg-primary border-primary opacity-75";
+    }
+
+    private async Task GameOver()
+    {
+        gameState = "gameover";
+        await SaveResult("Görsel Hafıza");
+    }
+
+    private async Task GameWon()
+    {
+        gameState = "gamewon";
+        score += 500; // Bitirme Bonusu!
+        await SaveResult("Görsel Hafıza (Mükemmel)");
+    }
+
+    private async Task SaveResult(string typeName)
+    {
+        var result = new CreateTestResultDto
+        {
+            UserId = AppState.UserId,
+            TestType = typeName,
+            Score = score,
+            ReactionTimeMs = 0
+        };
+        await Http.PostAsJsonAsync("api/testresults", result);
+    }
+}
