@@ -3,6 +3,7 @@
 @using MindPulse.UI.Services
 @inject HttpClient Http
 @inject NavigationManager NavManager
+@inject AppState AppState
 
 <div class="container text-center mt-4">
     <h2 class="mb-3">🧠 Görsel Hafıza Testi (4x4)</h2>
@@ -130,6 +131,9 @@
     {
         if (gameState != "play") return;
 
+        // Aynı tile'a zaten tıklanmışsa yok say
+        if (userClicks.Contains(index)) return;
+
         activeTiles.Add(index);
         StateHasChanged();
         await Task.Delay(200);
@@ -138,26 +142,23 @@
 
         if (pattern.Contains(index))
         {
-            if (!userClicks.Contains(index))
-            {
-                userClicks.Add(index);
-                score += 10;
+            userClicks.Add(index);
 
-                // Tüm kareleri bildi mi?
-                if (userClicks.Count == pattern.Count)
+            // Tüm kareleri bildi mi?
+            if (userClicks.Count == pattern.Count)
+            {
+                // --- KRİTİK KONTROL ---
+                if (level == 14)
                 {
-                    // --- KRİTİK KONTROL ---
-                    if (level == 14)
-                    {
-                        // OYUNU BİTİR VE KAZAN
-                        await GameWon();
-                    }
-                    else
-                    {
-                        // SONRAKİ SEVİYEYE GEÇ
-                        level++;
-                        await StartLevel();
-                    }
+                    // OYUNU BİTİR VE KAZAN
+                    await GameWon();
+                }
+                else
+                {
+                    // SONRAKİ SEVİYEYE GEÇ
+                    score += 5;
+                    level++;
+                    await StartLevel();
                 }
             }
         }
@@ -186,7 +187,7 @@
     private async Task GameWon()
     {
         gameState = "gamewon";
-        score += 500; // Bitirme Bonusu!
+        score += 35; // Bitirme Bonusu!
         await SaveResult("Görsel Hafıza (Mükemmel)");
     }
 

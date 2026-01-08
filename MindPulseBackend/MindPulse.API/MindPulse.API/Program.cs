@@ -1,9 +1,10 @@
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using MindPulse.API.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// CORS servisini ekle (Her yerden gelen isteði kabul et - Geliþtirme aþamasý için)
+// CORS servisini ekle (Her yerden gelen isteï¿½i kabul et - Geliï¿½tirme aï¿½amasï¿½ iï¿½in)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
@@ -12,7 +13,7 @@ builder.Services.AddCors(options =>
                .AllowAnyHeader());
 });
 
-// Veritabaný Servisini ekliyoruz
+// Veritabanï¿½ Servisini ekliyoruz
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -39,5 +40,27 @@ app.UseCors("AllowAll");
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Gerekli kï¿½tï¿½phaneyi eklemeyi unutma: 
+// using Microsoft.AspNetCore.StaticFiles; (En tepeye ekle)
+app.UseBlazorFrameworkFiles();
+
+var provider = new FileExtensionContentTypeProvider();
+// Bilinmeyen dosya tï¿½rlerini elle tanï¿½tï¿½yoruz
+provider.Mappings[".blat"] = "application/octet-stream";
+provider.Mappings[".dat"] = "application/octet-stream";
+provider.Mappings[".dll"] = "application/octet-stream";
+provider.Mappings[".json"] = "application/json";
+provider.Mappings[".wasm"] = "application/wasm";
+provider.Mappings[".woff"] = "application/font-woff";
+provider.Mappings[".woff2"] = "application/font-woff2";
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = provider,
+    ServeUnknownFileTypes = true, // Gï¿½venlik duvarï¿½nï¿½ delip geï¿½er
+    DefaultContentType = "application/octet-stream" // Ne olduï¿½unu anlamazsa dosya olarak ver
+});
+app.MapFallbackToFile("index.html"); // 2. Siteye gireni ana sayfaya yï¿½nlendirir
 
 app.Run();

@@ -2,10 +2,11 @@
 @using MindPulse.UI.Services
 @using MindPulse.UI.DTOs
 @inject HttpClient Http
+@inject AppState AppState
 
 <div class="home-container fade-in">
 
-    @if (AppState.UserId == 0)
+    @if (AppState.UserId <= 0)
     {
         /* --- MİSAFİR GÖRÜNÜMÜ (AYNEN KORUNDU) --- */
         <div class="text-center py-5">
@@ -56,6 +57,39 @@
     {
         /* --- KULLANICI DASHBOARD GÖRÜNÜMÜ --- */
         <div class="py-4">
+
+            @if (missingDataItems.Any())
+            {
+                <div class="alert alert-warning border-0 shadow-sm mb-4" style="border-radius: 16px; border-left: 4px solid #ffc107;">
+                    <div class="d-flex align-items-start">
+                        <span class="fs-3 me-3">📋</span>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold mb-2">Eksik Veriler</h6>
+                            <p class="mb-2 small">Daha iyi analiz için şu verileri ekleyebilirsin:</p>
+                            <ul class="mb-2 small">
+                                @foreach (var item in missingDataItems)
+                                {
+                                    <li>@item</li>
+                                }
+                            </ul>
+                            <div class="d-flex gap-2 flex-wrap">
+                                @if (missingDataItems.Any(x => x.Contains("günlük veri")))
+                                {
+                                    <a href="/daily-log" class="btn btn-sm btn-primary rounded-pill">📝 Günlük Veri Gir</a>
+                                }
+                                @if (missingDataItems.Any(x => x.Contains("refleks")))
+                                {
+                                    <a href="/reaction-test" class="btn btn-sm btn-success rounded-pill">⚡ Refleks Testi</a>
+                                }
+                                @if (missingDataItems.Any(x => x.Contains("hafıza")))
+                                {
+                                    <a href="/memory-test" class="btn btn-sm btn-info rounded-pill">🧠 Hafıza Testi</a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
 
             <div class="row align-items-center mb-4">
                 <div class="col-md-8">
@@ -226,6 +260,7 @@
     private int totalGames = 0;
     private int averageScore = 0;
     private int bestScore = 0;
+    private List<string> missingDataItems = new List<string>();
 
     // YENİ: Bilgi Kartı Değişkenleri
     private string currentFact = "";
@@ -243,11 +278,58 @@
     protected override async Task OnInitializedAsync()
     {
         // Kullanıcı giriş yapmışsa verileri çekip hesaplayalım
-        if (AppState.UserId > 0)
+        if (AppState.UserId > 0 && AppState.IsLoggedIn)
         {
             LoadRandomFact(); // Sayfa açılınca rastgele bilgi seç
             await LoadDashboardStats();
+            await CheckMissingData();
         }
+    }
+
+    private async Task CheckMissingData()
+    {
+        missingDataItems.Clear();
+        var today = DateTime.Now.Date;
+
+        try
+        {
+            // Bugün günlük veri var mı kontrol et
+            var logResponse = await Http.GetFromJsonAsync<TodayStatusDto>($"api/dailylogs/user/{AppState.UserId}/today");
+            if (logResponse != null && !logResponse.HasLogToday)
+            {
+                missingDataItems.Add("📝 Bugün için günlük veri girişi yapılmamış");
+            }
+
+            // Bugün test yapılmış mı kontrol et
+            var testResponse = await Http.GetFromJsonAsync<TodayTestStatusDto>($"api/testresults/user/{AppState.UserId}/today");
+            if (testResponse != null)
+            {
+                if (!testResponse.HasReflexTest)
+                {
+                    missingDataItems.Add("⚡ Bugün için refleks testi yapılmamış");
+                }
+                if (!testResponse.HasMemoryTest)
+                {
+                    missingDataItems.Add("🧠 Bugün için hafıza testi yapılmamış");
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Hata durumunda sessizce devam et
+        }
+    }
+
+    private class TodayStatusDto
+    {
+        public bool HasLogToday { get; set; }
+    }
+
+    private class TodayTestStatusDto
+    {
+        public bool HasTestToday { get; set; }
+        public bool HasReflexTest { get; set; }
+        public bool HasMemoryTest { get; set; }
     }
 
     // YENİ: Rastgele Bilgi Seçme Fonksiyonu

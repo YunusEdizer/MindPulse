@@ -3,6 +3,7 @@
 @using MindPulse.UI.Services
 @inject HttpClient Http
 @inject NavigationManager NavManager
+@inject AppState AppState
 
 <div class="container mt-5">
     <div class="row justify-content-center">
@@ -55,6 +56,13 @@
         {
             // 2. Varsa bilgileri alıyoruz
             var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+
+            // Null kontrolü
+            if (result == null)
+            {
+                errorMessage = "Sunucudan geçersiz yanıt alındı.";
+                return;
+            }
 
             // 3. Uygulama hafızasına (AppState) kaydediyoruz
             AppState.UserId = result.userId;

@@ -1,7 +1,9 @@
 ﻿@page "/register"
 @using MindPulse.UI.DTOs
+@using MindPulse.UI.Services
 @inject HttpClient Http
 @inject NavigationManager NavManager
+@inject AppState AppState
 
 <div class="container mt-5">
     <div class="row justify-content-center">
@@ -19,7 +21,12 @@
 
                     <div class="mb-3">
                         <label class="form-label">Kullanıcı Adı</label>
-                        <input @bind="registerModel.Username" class="form-control" placeholder="Adınızı girin" />
+                        <input @bind="registerModel.Username" class="form-control" placeholder="Kullanıcı Adınızı girin" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Yaşınız</label>
+                        <input @bind="registerModel.Age" type="number" class="form-control" placeholder="Örn: 22" min="10" max="99" required />
                     </div>
 
                     <div class="mb-3">
@@ -41,19 +48,44 @@
 
     private async Task HandleRegister()
     {
+        errorMessage = "";
         // 1. API'ye istek atıyoruz
         var response = await Http.PostAsJsonAsync("api/users/register", registerModel);
 
         if (response.IsSuccessStatusCode)
         {
-            // 2. Başarılıysa Ana Sayfaya yönlendir (veya Giriş sayfasına)
-            NavManager.NavigateTo("/");
-            Console.WriteLine("Kayıt Başarılı!");
+            // 2. Kayıt başarılı, otomatik olarak giriş yap
+            var result = await response.Content.ReadFromJsonAsync<RegisterResponse>();
+            
+            if (result != null && result.userId > 0)
+            {
+                // AppState'e kaydet
+                AppState.UserId = result.userId;
+                AppState.Username = registerModel.Username;
+                AppState.NotifyStateChanged();
+                
+                // Ana sayfaya yönlendir
+                NavManager.NavigateTo("/");
+            }
+            else
+            {
+                // Kayıt başarılı ama userId alınamadı, login sayfasına yönlendir
+                NavManager.NavigateTo("/login");
+            }
         }
         else
         {
             // 3. Hata varsa ekrana yaz
-            errorMessage = "Kayıt başarısız. Kullanıcı adı alınmış olabilir.";
+            var errorText = await response.Content.ReadAsStringAsync();
+            errorMessage = string.IsNullOrEmpty(errorText) 
+                ? "Kayıt başarısız. Kullanıcı adı alınmış olabilir." 
+                : errorText;
         }
+    }
+
+    private class RegisterResponse
+    {
+        public int userId { get; set; }
+        public string message { get; set; } = "";
     }
 }

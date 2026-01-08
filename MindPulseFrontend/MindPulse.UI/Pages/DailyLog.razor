@@ -2,6 +2,7 @@
 @using MindPulse.UI.Services
 @inject HttpClient Http
 @inject NavigationManager NavManager
+@inject AppState AppState
 
 <div class="container fade-in-page" style="max-width: 700px;">
 
@@ -27,6 +28,25 @@
     }
     else
     {
+        @if (missingDataItems.Any())
+        {
+            <div class="alert alert-info border-0 shadow-sm mb-4" style="border-radius: 16px; border-left: 4px solid #0dcaf0;">
+                <div class="d-flex align-items-start">
+                    <span class="fs-3 me-3">💡</span>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold mb-2">Eksik Veriler</h6>
+                        <p class="mb-2 small">Daha iyi analiz için şu verileri de ekleyebilirsin:</p>
+                        <ul class="mb-0 small">
+                            @foreach (var item in missingDataItems)
+                            {
+                                <li>@item</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+
         <div class="card border-0 shadow-lg overflow-hidden" style="border-radius: 20px;">
             <div class="card-body p-4 p-md-5">
 
@@ -149,8 +169,64 @@
     private CreateDailyLogDto logModel = new CreateDailyLogDto { MoodScore = 5, SleepHours = 7, Note = "" };
     private bool isSubmitting = false;
     private bool isSaved = false;
+    private List<string> missingDataItems = new List<string>();
 
-    protected override void OnInitialized() { if (AppState.UserId == 0) NavManager.NavigateTo("login"); }
+    protected override async Task OnInitializedAsync() 
+    { 
+        if (AppState.UserId <= 0) 
+        {
+            NavManager.NavigateTo("/login");
+            return;
+        }
+        
+        await CheckMissingData();
+    }
+
+    private async Task CheckMissingData()
+    {
+        missingDataItems.Clear();
+        var today = DateTime.Now.Date;
+
+        try
+        {
+            // Bugün günlük veri var mı kontrol et
+            var logResponse = await Http.GetFromJsonAsync<TodayStatusDto>($"api/dailylogs/user/{AppState.UserId}/today");
+            if (logResponse != null && !logResponse.HasLogToday)
+            {
+                missingDataItems.Add("📝 Bugün için günlük veri girişi yapılmamış");
+            }
+
+            // Bugün test yapılmış mı kontrol et
+            var testResponse = await Http.GetFromJsonAsync<TodayTestStatusDto>($"api/testresults/user/{AppState.UserId}/today");
+            if (testResponse != null)
+            {
+                if (!testResponse.HasReflexTest)
+                {
+                    missingDataItems.Add("⚡ Bugün için refleks testi yapılmamış");
+                }
+                if (!testResponse.HasMemoryTest)
+                {
+                    missingDataItems.Add("🧠 Bugün için hafıza testi yapılmamış");
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Hata durumunda sessizce devam et
+        }
+    }
+
+    private class TodayStatusDto
+    {
+        public bool HasLogToday { get; set; }
+    }
+
+    private class TodayTestStatusDto
+    {
+        public bool HasTestToday { get; set; }
+        public bool HasReflexTest { get; set; }
+        public bool HasMemoryTest { get; set; }
+    }
 
     private async Task SaveLog()
     {
@@ -158,10 +234,12 @@
         try
         {
             logModel.UserId = AppState.UserId;
-            logModel.Date = DateTime.Now;
+            // Date backend'de otomatik olarak DateTime.Now olarak ayarlanıyor
             // API'ye gönderiyoruz
             await Http.PostAsJsonAsync("api/dailylogs", logModel);
             isSaved = true;
+            // Kayıt sonrası eksik verileri tekrar kontrol et
+            await CheckMissingData();
         }
         catch (Exception) { isSaved = true; } // Demo için hata olsa da devam
         finally { isSubmitting = false; }
@@ -177,6 +255,6 @@
         public int SleepHours { get; set; }
         public int MoodScore { get; set; }
         public string Note { get; set; } = "";
-        public DateTime Date { get; set; }
+        // Date backend'de otomatik olarak ayarlanıyor, frontend'den göndermeye gerek yok
     }
 }

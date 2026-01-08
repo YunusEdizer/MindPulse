@@ -3,10 +3,15 @@
 @using MindPulse.UI.DTOs
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject AppState AppState
+@inject NavigationManager NavManager
 
 <style>
     /* Genel Arkaplan */
-    body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body {
+        background-color: #f8f9fa;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
 
     /* Modern Kart Yapısı */
     .dashboard-card {
@@ -19,10 +24,10 @@
         margin-bottom: 24px;
     }
 
-    .dashboard-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
 
     /* Kart Başlıkları */
     .card-header-custom {
@@ -53,11 +58,26 @@
         border-left: 5px solid transparent; /* Sol çizgi için yer */
         transition: transform 0.2s;
     }
-    .stat-box:hover { transform: scale(1.02); }
 
-    .stat-label { font-size: 0.8rem; color: #718096; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-value { font-size: 1.6rem; font-weight: 800; margin-top: 4px; color: #2d3748; }
-    
+        .stat-box:hover {
+            transform: scale(1.02);
+        }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: #718096;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+        font-size: 1.6rem;
+        font-weight: 800;
+        margin-top: 4px;
+        color: #2d3748;
+    }
+
     /* Liste Elemanları */
     .insight-item {
         background-color: #f7fafc;
@@ -93,6 +113,31 @@
         <div class="alert alert-warning text-center shadow-sm p-5 rounded-4">
             <h4 class="fw-bold">Veri Bulunamadı 😔</h4>
             <p>Analiz yapabilmemiz için lütfen oyun oynayın ve uyku verisi girin.</p>
+            <div class="mt-3">
+                <a href="/daily-log" class="btn btn-primary rounded-pill px-4 me-2">📝 Günlük Veri Gir</a>
+                <a href="/reaction-test" class="btn btn-success rounded-pill px-4">🎮 Oyun Oyna</a>
+            </div>
+        </div>
+    }
+    else if (analysisData != null && !string.IsNullOrEmpty(analysisData.Message) &&
+    (analysisData.Message.Contains("Veri bekleniyor") ||
+    analysisData.Message.Contains("Henüz veri") ||
+    analysisData.Message.Contains("Günlük verileriniz") ||
+    analysisData.Message.Contains("Test sonuçlarınız") ||
+    analysisData.Message.Contains("Ortalama uyku")))
+    {
+        <div class="alert alert-info text-center shadow-sm p-5 rounded-4">
+            <h4 class="fw-bold">📊 Analiz Hazırlanıyor</h4>
+            <p class="mb-3 fs-5">@((MarkupString)ConvertToHtml(analysisData.Suggestion))</p>
+
+            @if (!string.IsNullOrEmpty(analysisData.MoodSuggestion))
+            {
+                <p class="text-muted mb-3">@analysisData.MoodSuggestion</p>
+            }
+            <div class="mt-3">
+                <a href="/daily-log" class="btn btn-primary rounded-pill px-4 me-2">📝 Günlük Veri Gir</a>
+                <a href="/reaction-test" class="btn btn-success rounded-pill px-4">🎮 Oyun Oyna</a>
+            </div>
         </div>
     }
     else
@@ -136,10 +181,14 @@
                             </div>
                             <h5 class="text-uppercase" style="opacity: 0.9;">Gelecek Tahmini</h5>
                             <p class="mb-2" style="opacity: 0.9;">Bu gece <strong>8 saat</strong> uyursan yarınki tahmini performansın:</p>
-                            
+
                             <h1 class="display-1 fw-bold mb-2">@analysisData.PredictedScore.ToString("0")</h1>
-                            
-                            <p class="fst-italic mb-0 small" style="opacity: 0.8;">"@analysisData.Suggestion"</p>
+
+                            <div class="mt-3 px-3">
+                                <span style="font-size: 1.1rem; line-height: 1.5;">
+                                    @((MarkupString)ConvertToHtml(analysisData.Suggestion))
+                                </span>
+                            </div>
                         </div>
                     </div>
                 }
@@ -167,7 +216,7 @@
                             </div>
                         </div>
                         <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger text-center fw-bold mb-0">
-                             💡 @analysisData.MoodSuggestion
+                            💡 @analysisData.MoodSuggestion
                         </div>
                     </div>
                 </div>
@@ -183,7 +232,7 @@
                                 @foreach (var insight in analysisData.Insights)
                                 {
                                     <li class="insight-item shadow-sm">
-                                        @((MarkupString)System.Text.RegularExpressions.Regex.Replace(insight, @"\*\*(.*?)\*\*", "<strong class='text-dark'>$1</strong>"))
+                                        @((MarkupString)ConvertToHtml(insight))
                                     </li>
                                 }
                             </ul>
@@ -230,7 +279,7 @@
                         <div class="mb-2 fs-1">🤖</div>
                         <h6 class="fw-bold text-primary mb-2">Genel Tespit</h6>
                         <p class="text-muted small mb-0">
-                            @analysisData.Suggestion
+                            @((MarkupString)ConvertToHtml(analysisData.Suggestion))
                         </p>
                     </div>
 
@@ -249,13 +298,16 @@
         public double CategoryLow { get; set; }
         public double CategoryMedium { get; set; }
         public double CategoryHigh { get; set; }
-        
-        public string Suggestion { get; set; } = "";     
-        public double PredictedScore { get; set; }       
 
-        public double ScoreStressed { get; set; }        
-        public double ScoreRelaxed { get; set; }         
-        public string MoodSuggestion { get; set; } = ""; 
+        public double AvgReflexScore { get; set; }
+        public double AvgMemoryScore { get; set; }
+
+        public string Suggestion { get; set; } = "";
+        public double PredictedScore { get; set; }
+
+        public double ScoreStressed { get; set; }
+        public double ScoreRelaxed { get; set; }
+        public string MoodSuggestion { get; set; } = "";
 
         public List<string> Insights { get; set; } = new();
 
@@ -266,14 +318,55 @@
         public string Message { get; set; }
     }
 
+    // --- ÖNEMLİ EKLENTİ: Backend metnini HTML'e çevirir ---
+    private string ConvertToHtml(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+
+        // **Kalın Yazı** işaretlerini <b>...</b> etiketiyle değiştir
+        string html = System.Text.RegularExpressions.Regex.Replace(text, @"\*\*(.*?)\*\*", "<b class='text-dark'>$1</b>");
+
+        // Uyarı ikonlarını renklendir
+        html = html.Replace("⛔", "<span class='text-danger fs-4 me-1'>⛔</span>");
+        html = html.Replace("⚠️", "<span class='text-warning fs-4 me-1'>⚠️</span>");
+        html = html.Replace("🚀", "<span class='text-success fs-4 me-1'>🚀</span>");
+
+        return html;
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        // Yenile butonuna basınca yükleniyor animasyonu görünsün
+        if (AppState.UserId <= 0)
+        {
+            NavManager.NavigateTo("/login");
+            return;
+        }
+
         isLoading = true;
         try
         {
             var response = await Http.GetFromJsonAsync<AnalysisResponse>($"api/analysis/{AppState.UserId}");
-            analysisData = (response == null || !string.IsNullOrEmpty(response.Message)) ? null : response;
+            if (response != null)
+            {
+                if (!string.IsNullOrEmpty(response.Message) &&
+                    response.Message != "Veri eşleşmesi yok." &&
+                    !response.Message.Contains("Veri bekleniyor") &&
+                    !response.Message.Contains("Henüz veri") &&
+                    !response.Message.Contains("Günlük verileriniz") &&
+                    !response.Message.Contains("Test sonuçlarınız") &&
+                    !response.Message.Contains("Ortalama uyku"))
+                {
+                    analysisData = null;
+                }
+                else
+                {
+                    analysisData = response;
+                }
+            }
+            else
+            {
+                analysisData = null;
+            }
         }
         catch (Exception ex)
         {
@@ -290,9 +383,9 @@
     {
         if (analysisData != null)
         {
-            // --- RADAR GRAFİĞİ HESAPLAMA ---
-            double reflexScore = analysisData.CategoryHigh > 0 ? analysisData.CategoryHigh : 50;
-            double memoryScore = reflexScore * 0.95; 
+            double reflexScore = analysisData.AvgReflexScore > 0 ? analysisData.AvgReflexScore : 50;
+            double memoryScore = analysisData.AvgMemoryScore > 0 ? analysisData.AvgMemoryScore : 50;
+
             double sleepQuality = 70;
             if (analysisData.CategoryHigh > analysisData.CategoryLow) sleepQuality = 90;
             double moodScore = 60;
@@ -301,12 +394,11 @@
 
             var radarData = new double[] { reflexScore, memoryScore, sleepQuality, moodScore, energyScore };
 
-            // --- GRAFİKLERİ ÇİZ ---
-            await JS.InvokeVoidAsync("renderAdvancedCharts", 
-                radarData, 
-                analysisData.TrendDates,  
-                analysisData.TrendReflex, 
-                analysisData.TrendMemory  
+            await JS.InvokeVoidAsync("renderAdvancedCharts",
+                radarData,
+                analysisData.TrendDates,
+                analysisData.TrendReflex,
+                analysisData.TrendMemory
             );
         }
     }

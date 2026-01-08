@@ -2,8 +2,11 @@
 @using MindPulse.UI.Services
 @using MindPulse.UI.DTOs
 @using System.Text
+@using System.Net.Http.Json
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject NavigationManager NavManager
+@inject AppState AppState
 
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -24,6 +27,14 @@
             </button>
         </div>
     </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <strong>Hata:</strong> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
 
     @if (isLoading)
     {
@@ -63,13 +74,13 @@
                                 </td>
 
                                 <td>
-                                    @if (item.TestType.Contains("Refleks"))
+                                    @if (item.TestType.Contains("Refleks", StringComparison.OrdinalIgnoreCase))
                                     {
                                         <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill">
                                             ⚡ Refleks
                                         </span>
                                     }
-                                    else if (item.TestType.Contains("Hafıza"))
+                                    else if (item.TestType.Contains("Hafıza", StringComparison.OrdinalIgnoreCase))
                                     {
                                         <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
                                             🔢 Hafıza
@@ -107,7 +118,7 @@
                                 <td class="text-muted">
                                     @if (item.ReactionTimeMs > 0)
                                     {
-                                        <span>⏱️ @item.ReactionTimeMs ms</span>
+                                        <span>⏱️ @item.ReactionTimeMs.ToString("F2") ms</span>
                                     }
                                     else
                                     {
@@ -124,7 +135,6 @@
 </div>
 
 <style>
-    /* Tablo Satır Hover Efekti */
     .table-hover tbody tr:hover {
         background-color: #f8f9fa;
         transform: scale(1.002);
@@ -134,7 +144,6 @@
         position: relative;
     }
 
-    /* Renkli Nokta (Dot) */
     .dot {
         width: 8px;
         height: 8px;
@@ -146,25 +155,35 @@
 @code {
     private List<TestResultDto>? testResults;
     private bool isLoading = true;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
+        // Kullanıcı giriş yapmamışsa login sayfasına yönlendir
+        if (AppState.UserId <= 0)
+        {
+            NavManager.NavigateTo("login");
+            return;
+        }
+
         await LoadHistory();
     }
 
     private async Task LoadHistory()
     {
         isLoading = true;
+        errorMessage = null;
         try
         {
-            if (AppState.UserId > 0)
-            {
-                testResults = await Http.GetFromJsonAsync<List<TestResultDto>>($"api/testresults/user/{AppState.UserId}");
-            }
+            // API isteği
+            var response = await Http.GetFromJsonAsync<List<TestResultDto>>($"api/testresults/user/{AppState.UserId}");
+            testResults = response ?? new List<TestResultDto>();
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Hata: " + ex.Message);
+            Console.WriteLine($"Hata: {ex.Message}");
+            errorMessage = "Kayıtlar yüklenirken sunucu hatası oluştu.";
+            testResults = new List<TestResultDto>();
         }
         finally
         {
@@ -172,37 +191,43 @@
         }
     }
 
-    // --- YENİ EKLENEN: EXCEL (CSV) ÇIKTISI ALMA ---
     private async Task ExportToCsv()
     {
         if (testResults == null || !testResults.Any()) return;
 
-        var sb = new StringBuilder();
-        // CSV Başlık Satırı
-        sb.AppendLine("Tarih,Test Turu,Skor,Tepki Suresi (ms)");
-
-        // Verileri Satır Satır Ekle
-        foreach (var item in testResults.OrderByDescending(x => x.CreatedAt))
+        try
         {
-            // CSV formatına uygun string oluşturma
-            // Tarih, Tip, Skor, ms
-            var line = $"{item.CreatedAt:dd.MM.yyyy HH:mm},{item.TestType},{item.Score},{item.ReactionTimeMs}";
-            sb.AppendLine(line);
-        }
+            var sb = new StringBuilder();
+            // Başlık satırı
+            sb.AppendLine("Tarih,Test Turu,Skor,Tepki Suresi (ms)");
 
-        // Dosya ismi oluştur ve JavaScript fonksiyonunu çağır
-        var fileName = $"MindPulse_Gecmis_{DateTime.Now:yyyyMMdd_HHmm}.csv";
-        await JS.InvokeVoidAsync("downloadFile", fileName, sb.ToString());
+            foreach (var item in testResults.OrderByDescending(x => x.CreatedAt))
+            {
+                // CSV'de virgül hatasını önlemek için TestType içindeki virgülleri noktalı virgüle çeviriyoruz
+                var cleanType = item.TestType.Replace(",", ";");
+                var line = $"{item.CreatedAt:dd.MM.yyyy HH:mm},{cleanType},{item.Score},{item.ReactionTimeMs.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}";
+                sb.AppendLine(line);
+            }
+
+            var fileName = $"MindPulse_Gecmis_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+
+            // index.html içine yazdığımız JS fonksiyonunu çağırıyoruz
+            await JS.InvokeVoidAsync("downloadFile", fileName, sb.ToString());
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Dosya oluşturulurken bir hata oluştu.";
+            Console.WriteLine(ex.Message);
+        }
     }
 
-    // DTO Sınıfı
     public class TestResultDto
     {
         public int Id { get; set; }
         public int UserId { get; set; }
-        public string TestType { get; set; }
+        public string TestType { get; set; } = "";
         public int Score { get; set; }
-        public int ReactionTimeMs { get; set; }
+        public double ReactionTimeMs { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

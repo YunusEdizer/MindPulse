@@ -1,6 +1,7 @@
 ﻿@implements IDisposable
 @using MindPulse.UI.Services
 @inject NavigationManager NavManager
+@inject AppState AppState
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -23,7 +24,7 @@
             </NavLink>
         </div>
 
-        @if (AppState.UserId > 0)
+        @if (AppState.UserId > 0 && AppState.IsLoggedIn)
         {
             <div class="nav-item px-3 mb-2">
                 <NavLink class="nav-link custom-link" href="reaction-test">
@@ -52,7 +53,7 @@
             </div>
 
             <div class="nav-item px-3 mb-2">
-                <NavLink class="nav-link custom-link" href="history">
+                <NavLink class="nav-link custom-link" href="/history">
                     <span class="icon-box">📂</span> Geçmiş Kayıtlar
                 </NavLink>
             </div>
@@ -60,7 +61,7 @@
 
         <div class="mt-auto pt-4">
 
-            @if (AppState.UserId == 0)
+            @if (AppState.UserId <= 0 || !AppState.IsLoggedIn)
             {
                 /* --- MİSAFİR İSE --- */
                 <div class="nav-item px-3 mb-2">
@@ -77,6 +78,12 @@
             }
             else
             {
+                <div class="nav-item px-3 mb-2">
+                    <NavLink class="nav-link custom-link" href="leaderboard">
+                        <span class="icon-box" aria-hidden="true">🏆</span> Liderlik Tablosu
+                    </NavLink>
+                </div>
+
                 <div class="nav-item px-3 mb-2">
                     <NavLink class="nav-link custom-link" href="profile">
                         <span class="icon-box">👤</span> Profilim

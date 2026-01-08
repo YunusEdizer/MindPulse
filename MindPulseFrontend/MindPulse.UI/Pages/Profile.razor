@@ -1,5 +1,6 @@
 ﻿@page "/profile"
 @using MindPulse.UI.Services
+@inject AppState AppState
 
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -50,7 +51,7 @@
     protected override void OnInitialized()
     {
         // Eğer giriş yapmamışsa anasayfaya at
-        if (AppState.UserId == 0) NavManager.NavigateTo("/");
+        if (AppState.UserId <= 0) NavManager.NavigateTo("/");
     }
 
     private void GoToLogout()

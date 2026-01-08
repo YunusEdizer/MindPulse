@@ -128,7 +128,15 @@
             URL.revokeObjectURL(link.href);
         }
     </script>
-    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_framework/blazor.webassembly.js" autostart="false"></script>
+    <script>
+        Blazor.start({
+            loadBootResource: function (type, name, defaultUri, integrity) {
+                // Integrity kontrolünü devre dışı bırak
+                return defaultUri;
+            }
+        });
+    </script>
 </body>
 
 </html>

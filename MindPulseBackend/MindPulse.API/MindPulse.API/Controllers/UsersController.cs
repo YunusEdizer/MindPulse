@@ -21,6 +21,19 @@ namespace MindPulse.API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register(UserRegisterDto request)
         {
+            // Validation
+            if (string.IsNullOrWhiteSpace(request.Username))
+                return BadRequest("Kullanıcı adı boş olamaz.");
+            
+            if (string.IsNullOrWhiteSpace(request.Password))
+                return BadRequest("Şifre boş olamaz.");
+            
+            if (request.Username.Length < 3)
+                return BadRequest("Kullanıcı adı en az 3 karakter olmalıdır.");
+            
+            if (request.Password.Length < 3)
+                return BadRequest("Şifre en az 3 karakter olmalıdır.");
+
             // Kullanıcı var mı kontrol et (Basit kontrol)
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
             {
