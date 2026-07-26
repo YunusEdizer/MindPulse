@@ -26,6 +26,14 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Uygulama açılışında bekleyen migration'ları uygula — Azure SQL şemasını otomatik kurar,
+// elle "dotnet ef database update" çalıştırmaya gerek kalmaz.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

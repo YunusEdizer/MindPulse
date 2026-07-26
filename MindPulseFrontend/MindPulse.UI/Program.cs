@@ -7,12 +7,8 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// HttpClient kaydı — API adresi wwwroot/appsettings.json içindeki "ApiBaseUrl"den okunur.
-// Ayar yoksa yerel geliştirme adresine düşer (localhost).
-var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
-if (string.IsNullOrWhiteSpace(apiBaseUrl))
-    apiBaseUrl = "https://localhost:7132/";
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
+// HttpClient — hosted Blazor WASM: frontend, kendisini sunan origin'e (aynı App Service) istek atar.
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 // --- YEN� EKLENEN SATIR ---
 // AppState'i buraya kaydediyoruz
